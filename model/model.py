@@ -26,6 +26,7 @@ class ResNet(nn.Module):
 
             TODO Add in modularity for easy adjusting of hyperparameters
             """
+            super().__init__()
             self.in_size = in_size
             self.out_size = out_size
             self.depth = depth
@@ -35,8 +36,8 @@ class ResNet(nn.Module):
             in_size_x = in_size
             for i in range(depth):
                 layers.append(torch.nn.Linear(in_size_x, out_size,bias=bias))
-                layers.append(torch.ReLU())
-                layers.append(torch.nn.LayerNorm())
+                layers.append(torch.nn.ReLU())
+                layers.append(torch.nn.LayerNorm(out_size))
                 in_size_x = out_size
             layers.append(torch.nn.Linear(in_size_x, out_size, bias=bias))
 
@@ -45,7 +46,7 @@ class ResNet(nn.Module):
             if in_size == out_size:
                 self.residual = torch.nn.Identity()
             else:
-                self.residual = torch.nn.Linear(in_size_x, out_size)
+                self.residual = torch.nn.Linear(in_size, out_size)
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
             return self.residual(x) + self.block(x)
@@ -54,7 +55,6 @@ class ResNet(nn.Module):
             self, 
             h = 28, # MNIST default dimensions
             w = 28, # MNIST default dimensions
-            color_channels = 1, # grayscale images, not RGB
             out_classes = 2, # binary classification
             num_blocks = 2,
             depth_blocks = 2,
@@ -68,7 +68,6 @@ class ResNet(nn.Module):
         Args:
             h: height of image
             w: width of image
-            color_channels: number of color channels
             out_classes: number of classes
             num_blocks: number of residual blocks for skipping
             depth_blocks: number of hidden layers in each residual block
@@ -77,20 +76,20 @@ class ResNet(nn.Module):
 
 
         Hard-coded hyperparamters as defined in ResNetBlock.
-        TODO Add in modularity for easy hyperparameter tunings
         TODO Change shape to allow array for custom sizes of hidden blocks
         """
+        super().__init__()
     
         self.h = h
         self.w = w
-        self.color_channels = color_channels
+        self.color_channels = 1 # assumed grayscaled based on Tumor dataset definition
         self.out_channels = out_classes
         self.num_blocks = num_blocks
         self.depth_blocks = depth_blocks
         self.hidden_dim = hidden_dim
         self.bias = bias
 
-        in_size_x = h * w * color_channels
+        in_size_x = h * w * self.color_channels
         out_size = hidden_dim
         layers = []
         for i in range(num_blocks):
@@ -101,5 +100,9 @@ class ResNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.view(-1, self.h * self.w * self.color_channels)
+        # Ensure the input has a floating-point dtype to match model weights;
+        # if input comes as a ByteTensor (e.g., raw image bytes), convert and normalize.
+        if not x.dtype.is_floating_point:
+            x = x.float() / 255.0
         return self.sequential(x)
 

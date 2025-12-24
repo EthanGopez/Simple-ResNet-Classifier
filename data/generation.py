@@ -1,5 +1,6 @@
 import argparse
 import csv
+from pathlib import Path
 
 import numpy as np
 import cv2
@@ -13,7 +14,10 @@ def generate(
         seed : int = 42
 ):
     rng = np.random.default_rng(seed=seed)
-    dir = dir + "/"
+    image_path = 'data/' + dir + '/'
+    csv_path = 'data/labels/'
+    Path(image_path).mkdir(parents=True, exist_ok=True)
+    Path(csv_path).mkdir(parents=True, exist_ok=True)
 
     # hard-coded parameters
     START_ANGLE = 0
@@ -39,7 +43,7 @@ def generate(
     
     lesion_prop_boundary: float = image_count * lesion_prop
 
-    with open(dir + 'labels.csv', 'w', newline='') as file:
+    with open(csv_path + 'labels_' + dir + '.csv', 'w', newline='') as file:
         writer = csv.writer(file)
 
         for i in range(image_count):
@@ -93,7 +97,7 @@ def generate(
                 # case: we do NOT have a lesion
                 writer.writerow([file_name, 0])
 
-            cv2.imwrite(dir + file_name, img)
+            cv2.imwrite(image_path + file_name, img)
 
 
     return
@@ -105,7 +109,7 @@ if __name__ == "__main__":
     parser.add_argument("--dir", type=str, required=True) #if not train set, then val set
     
     parser.add_argument("--image_count", type=int, default=2000)
-    parser.add_argument("--lesion_prop", type=float, default=0.2)
+    parser.add_argument("--lesion_prop", type=float, default=0.1)
     parser.add_argument("--height", type=int, default=28)
     parser.add_argument("--width", type=int, default=28)
     parser.add_argument("--seed", type=int, default=42)
